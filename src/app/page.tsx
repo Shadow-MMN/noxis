@@ -1,3 +1,5 @@
+import { ConnectWallet } from "@/components/wallet/connect-button";
+
 const POOL_ADDRESS =
   "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a";
 
@@ -53,14 +55,7 @@ export default function Home() {
             who paid whom, how much, or when.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              disabled
-              title="Wallet integration lands with the STRK20 integration plan"
-              className="cursor-not-allowed rounded-lg bg-copper-500 px-6 py-3 text-sm font-medium text-graphite-950 opacity-60 transition-colors hover:bg-copper-400"
-            >
-              Connect wallet — coming soon
-            </button>
+            <ConnectWallet />
             <a
               href="#how-it-works"
               className="rounded-lg border border-graphite-700 px-6 py-3 text-sm font-medium text-graphite-200 transition-colors hover:border-copper-500 hover:text-copper-300"

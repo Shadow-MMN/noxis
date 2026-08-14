@@ -32,13 +32,15 @@ Limit, stated plainly: deposit/withdrawal amounts and the timing of pool interac
 ## 4. Prerequisites & versions
 
 - `starknet@10.4.0` (pin exact — STRK20 lives in `WalletAccountV6`, shipped in v10.4.0)
-- `@starknet-io/get-starknet-discovery@6.0.3` (npm `next` tag — pin explicitly or you get the wrong major)
-- `@starknet-io/get-starknet-wallet-standard@6.0.3` (npm `next` tag — pin explicitly)
+- `@starknet-io/get-starknet-discovery@6.0.2` (npm `next` tag — pin explicitly or you get the wrong major)
+- `@starknet-io/get-starknet-wallet-standard@6.0.2` (npm `next` tag — pin explicitly)
 - `@starknet-io/types-js@0.10.3`
+
+> **Drift found 2026-08-14:** the skill pinned discovery/wallet-standard 6.0.3, but `starknet@10.4.0`'s types reference wallet-standard 6.0.2 — installing 6.0.3 yields two incompatible type copies (TS2345 at the `WalletAccountV6.connect` boundary). Aligned to **6.0.2** (the starter kit's proven set).
 - Test wallet: **Ready X**; Xverse as secondary (wallet API in progress)
 - Node ≥ 24 recommended for SDK tooling; repo runs Node 25 ✓
 
-## 5. Phase 1 — Wallet connection + capability detection
+## 5. Phase 1 — Wallet connection + capability detection ✅ done 2026-08-14
 
 1. Install the pinned packages above (`package.json`).
 2. Create the wallet layer, modeled on the starter kit's `walletContext.ts`: a store + `connect()` using get-starknet v6 discovery, exposing a `WalletAccountV6` (new `src/lib/wallet/` module).
@@ -92,6 +94,7 @@ Limit, stated plainly: deposit/withdrawal amounts and the timing of pool interac
 ## 12. Open items to re-verify at build time
 
 - Ready X wallet naming/status (Argent rebrand — user-confirmed STRK20-capable; confirm it surfaces in get-starknet v6 discovery).
+- Version drift (2026-08-14): discovery/wallet-standard pinned to 6.0.2, not the skill's 6.0.3 — starknet 10.4.0 types require 6.0.2 (see §4).
 - Xverse dapp-facing Wallet API status.
 - Whether a testnet STRK20 pool exists.
 - Current `starknet` / get-starknet dist-tags (STRK20-era releases live on the npm `next` tag).
