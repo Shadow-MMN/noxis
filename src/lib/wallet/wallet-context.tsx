@@ -99,19 +99,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setError("");
     setConnecting(true);
     try {
-      // Ask the wallet which chain it's on first, then connect the
-      // WalletAccount against that network's RPC so reads and waits target
-      // the right chain (testnet-first: Sepolia must not hit a mainnet RPC).
-      let network = "Mainnet";
-      try {
-        const id = (await walletV6.requestChainId(selected)) as string;
-        network = networkName(id);
-        setChainId(id);
-      } catch {
-        /* wallet unreachable — keep the mainnet default */
-      }
+      // Connect first (no prompts), then request accounts. Chain-ID queries
+      // only happen once the wallet has a session — some wallets hang or
+      // reject pre-session RPC calls, which would make connect appear dead.
       const myWA = await WalletAccountV6.connect(
-        { nodeUrl: rpcUrlFor(network) },
+        { nodeUrl: rpcUrlFor("Mainnet") },
         selected
       );
       setWalletAccount(myWA);
@@ -131,6 +123,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (granted) {
         const id = (await walletV6.requestChainId(selected)) as string;
         setChainId(id);
+        // Point the WalletAccount at the wallet's actual network so reads and
+        // waits target the right chain (testnet-first: Sepolia must not hit a
+        // mainnet RPC). Cheap — it only constructs the account object.
+        const net = networkName(id);
+        if (net !== "Mainnet") {
+          const wa = await WalletAccountV6.connect(
+            { nodeUrl: rpcUrlFor(net) },
+            selected
+          );
+          setWalletAccount(wa);
+        }
       }
 
       const specs = await walletV6.supportedSpecs(selected);
