@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Noxis
 
-## Getting Started
+**Private payments on Starknet.**
 
-First, run the development server:
+Noxis is a private payments app built for the [STRK20 Private Sprint](https://github.com/starkience/strk20-hackathon). It lets you hold, send, and receive STRK-backed value without publishing who paid whom, how much, or when. Payments flow through the STRK20 privacy pool on Starknet mainnet — visible on-chain is that *a* shielded payment happened, never *your* shielded payment.
+
+## What it does
+
+- **Shield** — deposit STRK into the STRK20 pool and mint a private note only you can spend.
+- **Unshield** — redeem a note back to a fresh account, breaking the link to the deposit.
+- **Private transfer** — move value from one note to another with no on-chain link between sender and recipient.
+- **Clear transaction states** — pending / confirmed / failed are always legible, even though the underlying details stay private.
+
+## What is and isn't private
+
+- **Private:** the amount, the sender, the recipient, and the link between any two payments.
+- **Public:** that the STRK20 pool is being used, and the fact that a payment occurred. This is inherent to the privacy pool design — Noxis does not and cannot hide the existence of activity, only its contents and participants.
+
+## Status
+
+- [x] Next.js + Tailwind scaffold, Noxis UI foundation (graphite + copper/amber)
+- [x] Registered for the STRK20 Private Sprint
+- [ ] STRK20 integration plan (skill-driven)
+- [ ] Wallet picker
+- [ ] Shield / unshield / private transfer flows
+- [ ] Mainnet transactions + `strk20.json` fields filled in
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Mainnet RPC requires a free [Alchemy](https://www.alchemy.com) key. Copy `.env.example` to `.env.local` and fill in your key:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+NEXT_PUBLIC_ALCHEMY_RPC_URL=https://starknet-mainnet.g.alchemy.com/v2/<YOUR_ALCHEMY_KEY>
+```
 
-## Learn More
+Never commit `.env.local` — it is gitignored.
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT — see [LICENSE](LICENSE).
