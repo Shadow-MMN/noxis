@@ -9,7 +9,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { constants, validateAndParseAddress, WalletAccountV6, walletV6 } from "starknet";
+import {
+  compareVersions,
+  constants,
+  validateAndParseAddress,
+  WalletAccountV6,
+  walletV6,
+} from "starknet";
 import { createStore, type Store } from "@starknet-io/get-starknet-discovery";
 import type { WalletWithStarknetFeatures } from "@starknet-io/get-starknet-wallet-standard/features";
 import { rpcUrlFor } from "@/lib/pool";
@@ -152,11 +158,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
 
       let capable = false;
+      // AVNU's documented probe: the STRK20 methods ship with wallet API
+      // >= 0.10.3 (wallet_supportedWalletApi). Some wallets only advertise
+      // this there, not in supportedSpecs — try it first, then fall back.
       try {
-        const specs = await walletV6.supportedSpecs(selected);
-        capable = isStrk20Capable(Array.isArray(specs) ? specs : []);
+        const apiVersions = await walletV6.supportedWalletApi(selected);
+        capable =
+          Array.isArray(apiVersions) &&
+          apiVersions.some((v) => compareVersions(String(v), "0.10.3") >= 0);
       } catch {
-        /* capability unknown — show as not capable */
+        /* wallet predates supportedWalletApi — fall through to specs */
+      }
+      if (!capable) {
+        try {
+          const specs = await walletV6.supportedSpecs(selected);
+          capable = isStrk20Capable(Array.isArray(specs) ? specs : []);
+        } catch {
+          /* capability unknown — show as not capable */
+        }
       }
       setStrk20Capable(capable);
     } catch (err) {
