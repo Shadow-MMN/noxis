@@ -116,28 +116,49 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setAddress(validateAndParseAddress(accounts[0]));
       }
 
-      const permissions = await walletV6.getPermissions(selected);
-      const granted = Array.isArray(permissions) && permissions.includes("accounts");
+      // Everything below is introspection — if any probe fails, keep the
+      // connection and degrade gracefully instead of resetting it (which
+      // looked like "I confirmed but the dapp forgot me").
+      let granted = Array.isArray(accounts) && accounts.length > 0;
+      try {
+        const permissions = await walletV6.getPermissions(selected);
+        granted =
+          Array.isArray(permissions) && permissions.includes("accounts");
+      } catch {
+        /* keep accounts-derived default */
+      }
       setConnected(granted);
 
-      if (granted) {
+      try {
         const id = (await walletV6.requestChainId(selected)) as string;
         setChainId(id);
         // Point the WalletAccount at the wallet's actual network so reads and
-        // waits target the right chain (testnet-first: Sepolia must not hit a
-        // mainnet RPC). Cheap — it only constructs the account object.
+        // waits target the right chain (testnet-first). Cheap — it only
+        // constructs the account object. On failure, keep the initial one.
         const net = networkName(id);
         if (net !== "Mainnet") {
-          const wa = await WalletAccountV6.connect(
-            { nodeUrl: rpcUrlFor(net) },
-            selected
-          );
-          setWalletAccount(wa);
+          try {
+            const wa = await WalletAccountV6.connect(
+              { nodeUrl: rpcUrlFor(net) },
+              selected
+            );
+            setWalletAccount(wa);
+          } catch {
+            /* keep mainnet-RPC account; reads may lag until reconnect */
+          }
         }
+      } catch {
+        /* chain probe failed — network shows empty */
       }
 
-      const specs = await walletV6.supportedSpecs(selected);
-      setStrk20Capable(isStrk20Capable(specs));
+      let capable = false;
+      try {
+        const specs = await walletV6.supportedSpecs(selected);
+        capable = isStrk20Capable(Array.isArray(specs) ? specs : []);
+      } catch {
+        /* capability unknown — show as not capable */
+      }
+      setStrk20Capable(capable);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setConnected(false);
