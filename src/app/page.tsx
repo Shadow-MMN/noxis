@@ -1,4 +1,5 @@
 import { ConnectWallet } from "@/components/wallet/connect-button";
+import { ShieldPanel } from "@/components/shield/shield-panel";
 
 const POOL_ADDRESS =
   "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a";
@@ -121,6 +122,20 @@ export default function Home() {
                 </dl>
               </article>
             ))}
+          </div>
+        </section>
+
+        {/* Shield */}
+        <section id="shield" className="mt-24">
+          <h2 className="text-2xl font-semibold tracking-tight text-graphite-50">
+            Shield STRK
+          </h2>
+          <p className="mt-3 max-w-xl text-graphite-300">
+            Deposit STRK into the privacy pool and mint a private note. The
+            deposit amount is public at the door — after that, it disappears.
+          </p>
+          <div className="mt-8">
+            <ShieldPanel />
           </div>
         </section>
       </main>

@@ -49,7 +49,7 @@ Limit, stated plainly: deposit/withdrawal amounts and the timing of pool interac
 5. **Graceful degradation:** a wallet without privacy support sees a clear "install Ready X to use private payments" state; private actions are hidden, the rest of the page still works.
 6. Verify: headless build/lint; manual check with Ready X against the wallet test dapp (https://starknet-wallet-account.vercel.app/). Fetch the WalletAccount guide (https://starknet-js.com/docs/next/guides/account/walletAccount/#with-get-starknet-v6) for the exact current API before writing code — never guess method names.
 
-## 6. Phase 2 — Shield flow
+## 6. Phase 2 — Shield flow ✅ done 2026-08-14
 
 1. Shield UI on the landing page: token + amount, **"MAX" reserves the pool fee** (read it from the pool via `get_fee_amount`, not assumed — it was ~4 STRK on mainnet at skill-authoring time; re-read at build time).
 2. **A deposit is two transactions** — the ERC-20 `approve` must be visible on-chain before the private deposit can be proven, so the wallet prompts twice. Name both steps in the UI ("Approve → Shield") so users don't read the second prompt as a duplicate bug.
@@ -98,7 +98,7 @@ Limit, stated plainly: deposit/withdrawal amounts and the timing of pool interac
 - Xverse dapp-facing Wallet API status.
 - Whether a testnet STRK20 pool exists.
 - Current `starknet` / get-starknet dist-tags (STRK20-era releases live on the npm `next` tag).
-- Pool fee amount at build time; paymaster/fee UX design.
+- Pool fee amount at build time; paymaster/fee UX design. **Measured 2026-08-14: 6 STRK on mainnet** (`get_fee_amount`, no args — up from ~4 STRK at skill authoring; the fee read + MAX stay gated on Mainnet).
 - `strk20-by-example.org` was unreachable from this machine at plan time — re-check pages before citing them in the UI.
 
 ## 13. Links
