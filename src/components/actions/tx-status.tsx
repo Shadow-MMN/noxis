@@ -6,7 +6,7 @@ import { explorerTxUrl } from "@/lib/pool";
 export type TxState =
   | { status: "idle" }
   | { status: "pending"; txHash: string }
-  | { status: "submitted"; txHash: string }
+  | { status: "submitted"; txHash: string; detail?: string }
   | { status: "confirmed"; txHash: string; detail: string; note?: string }
   | { status: "declined"; txHash: string; detail: string }
   | { status: "failed"; detail: string };
@@ -36,9 +36,11 @@ function CopyHash({ txHash }: { txHash: string }) {
 export function TxStatusCard({
   tx,
   network,
+  onCheckStatus,
 }: {
   tx: TxState;
   network: string;
+  onCheckStatus?: () => void;
 }) {
   if (tx.status === "pending" || tx.status === "submitted") {
     return (
@@ -60,6 +62,15 @@ export function TxStatusCard({
           </a>
           <CopyHash txHash={tx.txHash} />
         </div>
+        {tx.status === "submitted" && onCheckStatus ? (
+          <button
+            type="button"
+            onClick={onCheckStatus}
+            className="mt-2 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/10"
+          >
+            Check status
+          </button>
+        ) : null}
       </div>
     );
   }

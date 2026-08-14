@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { num } from "starknet";
 import type { WALLET_API } from "@starknet-io/types-js";
 import { useWallet } from "@/lib/wallet/wallet-context";
@@ -20,6 +20,7 @@ import {
   isScreeningError,
   type TxState,
 } from "@/components/actions/tx-status";
+import { pollTxOutcome } from "@/lib/tx";
 
 export function TransferPanel() {
   const { walletAccount, address, isConnected, strk20Capable, network, rpcUrl } =
@@ -80,19 +81,15 @@ export function TransferPanel() {
       ];
       const res = await walletAccount.strk20InvokeTransaction(actions);
       const txHash = res.transaction_hash;
+      const detail = `Sent ${fmtAmount(amountWei, info.decimals)} ${info.symbol} privately ✓`;
       setTx({ status: "pending", txHash });
-      try {
-        await walletAccount.provider.waitForTransaction(txHash, {
-          retries: 60,
-          retryInterval: 3000,
-        });
-        setTx({
-          status: "confirmed",
-          txHash,
-          detail: `Sent ${fmtAmount(amountWei, info.decimals)} ${info.symbol} privately ✓`,
-        });
-      } catch {
-        setTx({ status: "submitted", txHash });
+      const outcome = await pollTxOutcome(walletAccount.provider, txHash);
+      if (outcome === "confirmed") {
+        setTx({ status: "confirmed", txHash, detail });
+      } else if (outcome === "reverted") {
+        setTx({ status: "failed", detail: "Transaction reverted on-chain." });
+      } else {
+        setTx({ status: "submitted", txHash, detail });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -105,6 +102,28 @@ export function TransferPanel() {
       setBusy(false);
     }
   };
+
+  // Manual re-poll for the "submitted" state — the pool relay can lag the RPC.
+  const recheck = useCallback(async () => {
+    if (!walletAccount || tx.status !== "submitted" || !tx.txHash) return;
+    setBusy(true);
+    try {
+      const outcome = await pollTxOutcome(walletAccount.provider, tx.txHash, {
+        timeoutMs: 30_000,
+      });
+      if (outcome === "confirmed") {
+        setTx({
+          status: "confirmed",
+          txHash: tx.txHash,
+          detail: tx.detail ?? "Transaction confirmed ✓",
+        });
+      } else if (outcome === "reverted") {
+        setTx({ status: "failed", detail: "Transaction reverted on-chain." });
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [walletAccount, tx]);
 
   if (isConnected && !strk20Capable) {
     return (
@@ -203,7 +222,7 @@ export function TransferPanel() {
         </p>
       </div>
 
-      <TxStatusCard tx={tx} network={network} />
+      <TxStatusCard tx={tx} network={network} onCheckStatus={recheck} />
     </div>
   );
 }

@@ -14,12 +14,11 @@ import {
   tokensForNetwork,
 } from "@/lib/pool";
 import { ConnectWallet } from "@/components/wallet/connect-button";
-import { TokenSelect } from "@/components/actions/token-select";
-import {
-  TxStatusCard,
+import { TokenSelect } from "@/components/actions/token-select";import { TxStatusCard,
   isScreeningError,
   type TxState,
 } from "@/components/actions/tx-status";
+import { pollTxOutcome } from "@/lib/tx";
 
 export function ShieldPanel() {
   const { walletAccount, address, isConnected, strk20Capable, network, rpcUrl } =
@@ -107,21 +106,21 @@ export function ShieldPanel() {
       ];
       const res = await walletAccount.strk20InvokeTransaction(actions);
       const txHash = res.transaction_hash;
+      const detail = `Shielded ${fmtAmount(amountWei, info.decimals)} ${info.symbol} ✓`;
       setTx({ status: "pending", txHash });
-      try {
-        await walletAccount.provider.waitForTransaction(txHash, {
-          retries: 60,
-          retryInterval: 3000,
-        });
+      const outcome = await pollTxOutcome(walletAccount.provider, txHash);
+      if (outcome === "confirmed") {
         refreshBalance();
         setTx({
           status: "confirmed",
           txHash,
-          detail: `Shielded ${fmtAmount(amountWei, info.decimals)} ${info.symbol} ✓`,
+          detail,
           note: "Your note matures in ~10 blocks before it can be spent — you'll see it in private transfers shortly after.",
         });
-      } catch {
-        setTx({ status: "submitted", txHash });
+      } else if (outcome === "reverted") {
+        setTx({ status: "failed", detail: "Transaction reverted on-chain." });
+      } else {
+        setTx({ status: "submitted", txHash, detail });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -134,6 +133,30 @@ export function ShieldPanel() {
       setBusy(false);
     }
   };
+
+  // Manual re-poll for the "submitted" state — the pool relay can lag the RPC,
+  // so let the user nudge the check instead of staring at a stuck card.
+  const recheck = useCallback(async () => {
+    if (!walletAccount || tx.status !== "submitted" || !tx.txHash) return;
+    setBusy(true);
+    try {
+      const outcome = await pollTxOutcome(walletAccount.provider, tx.txHash, {
+        timeoutMs: 30_000,
+      });
+      if (outcome === "confirmed") {
+        refreshBalance();
+        setTx({
+          status: "confirmed",
+          txHash: tx.txHash,
+          detail: tx.detail ?? "Transaction confirmed ✓",
+        });
+      } else if (outcome === "reverted") {
+        setTx({ status: "failed", detail: "Transaction reverted on-chain." });
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [walletAccount, tx, refreshBalance]);
 
   if (isConnected && !strk20Capable) {
     return (
@@ -246,7 +269,7 @@ export function ShieldPanel() {
         </p>
       </div>
 
-      <TxStatusCard tx={tx} network={network} />
+      <TxStatusCard tx={tx} network={network} onCheckStatus={recheck} />
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
 import { ConnectWallet } from "@/components/wallet/connect-button";
 import { TokenSelect } from "@/components/actions/token-select";
 import { explorerTxUrl } from "@/lib/pool";
+import { pollTxOutcome } from "@/lib/tx";
 
 const SLIPPAGE = 0.05; // 5%
 const FEE_TOKEN = "STRK"; // pool fee is STRK-denominated
@@ -171,18 +172,36 @@ export function SwapPanel() {
       }
       setTxHash(submitJson.transactionHash);
       setStep("pending");
-      try {
-        await walletAccount.provider.waitForTransaction(submitJson.transactionHash, {
-          retries: 60,
-          retryInterval: 3000,
-        });
+      const outcome = await pollTxOutcome(
+        walletAccount.provider,
+        submitJson.transactionHash
+      );
+      if (outcome === "confirmed") {
         setStep("confirmed");
-      } catch {
+      } else if (outcome === "reverted") {
+        setStep("failed");
+        setError("Swap reverted on-chain.");
+      } else {
         setStep("submitted");
       }
     } catch (err) {
       setStep("failed");
       setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  // Manual re-poll for the "submitted" state — the paymaster relay can lag
+  // the RPC, so let the user nudge the check instead of a stuck card.
+  const recheck = async () => {
+    if (!walletAccount || !txHash) return;
+    const outcome = await pollTxOutcome(walletAccount.provider, txHash, {
+      timeoutMs: 30_000,
+    });
+    if (outcome === "confirmed") {
+      setStep("confirmed");
+    } else if (outcome === "reverted") {
+      setStep("failed");
+      setError("Swap reverted on-chain.");
     }
   };
 
@@ -343,6 +362,15 @@ export function SwapPanel() {
               copy hash
             </button>
           </div>
+          {step === "submitted" ? (
+            <button
+              type="button"
+              onClick={recheck}
+              className="mt-2 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/10"
+            >
+              Check status
+            </button>
+          ) : null}
         </div>
       ) : null}
 
