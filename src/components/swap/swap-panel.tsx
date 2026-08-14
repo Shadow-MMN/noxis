@@ -8,7 +8,13 @@ import {
   type Quote,
 } from "@avnu/avnu-sdk";
 import { useWallet } from "@/lib/wallet/wallet-context";
-import { TOKENS, fmtAmount, parseAmount } from "@/lib/pool";
+import {
+  TOKENS,
+  fmtAmount,
+  parseAmount,
+  tokenAddress,
+  tokensForNetwork,
+} from "@/lib/pool";
 import { ConnectWallet } from "@/components/wallet/connect-button";
 import { TokenSelect } from "@/components/actions/token-select";
 import { explorerTxUrl } from "@/lib/pool";
@@ -44,8 +50,13 @@ export function SwapPanel() {
   const [txHash, setTxHash] = useState("");
   const [error, setError] = useState("");
 
-  const sellInfo = TOKENS[sell];
-  const buyInfo = TOKENS[buy];
+  const tokens = tokensForNetwork(network);
+  const sellInfo =
+    tokens.some((t) => t.symbol === sell) && sell in TOKENS
+      ? TOKENS[sell]
+      : TOKENS.STRK;
+  const buyInfo =
+    tokens.some((t) => t.symbol === buy) && buy in TOKENS ? TOKENS[buy] : TOKENS.STRK;
   const sellWei = parseAmount(amount, sellInfo.decimals);
   const samePair = sell === buy;
 
@@ -61,8 +72,8 @@ export function SwapPanel() {
         return;
       }
       getQuotes({
-        sellTokenAddress: sellInfo.address,
-        buyTokenAddress: buyInfo.address,
+        sellTokenAddress: tokenAddress(sellInfo, network),
+        buyTokenAddress: tokenAddress(buyInfo, network),
         sellAmount: sellWei,
         takerAddress: address,
         size: 1,
@@ -87,7 +98,7 @@ export function SwapPanel() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [sell, buy, sellWei, address, samePair, sellInfo.address, buyInfo.address]);
+  }, [sell, buy, sellWei, address, samePair, sellInfo, buyInfo, network]);
 
   const handleSwap = async () => {
     if (!walletAccount || !quote || !sellWei || sellWei <= 0n) return;
@@ -131,9 +142,9 @@ export function SwapPanel() {
       setStep("proving");
       const prover = createStrk20WalletProver(walletAccount);
       const callAndProof = await prover.buildAndProve({
-        sellTokenAddress: sellInfo.address,
+        sellTokenAddress: tokenAddress(sellInfo, network),
         sellAmount: sellWei,
-        buyTokenAddress: buyInfo.address,
+        buyTokenAddress: tokenAddress(buyInfo, network),
         executorAddress,
         executorCalls: calls,
         fee,
@@ -188,6 +199,15 @@ export function SwapPanel() {
           Ready X
         </a>
         .
+      </p>
+    );
+  }
+
+  if (network !== "Mainnet") {
+    return (
+      <p className="max-w-xl rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-300">
+        Private swaps run on Mainnet for now — switch your wallet to Mainnet to
+        trade. Shield / send / unshield all work on Sepolia.
       </p>
     );
   }
@@ -291,8 +311,8 @@ export function SwapPanel() {
         )}
         <p className="mt-3 text-xs leading-5 text-graphite-500">
           Your {sellInfo.symbol} must already be shielded. The swap is relayed
-          gaslessly — the pool fee (≈6 STRK) is paid from your shielded
-          balance. The seller, buyer and amounts stay private.
+          gaslessly — the pool fee (STRK-denominated) is paid from your
+          shielded balance. The seller, buyer and amounts stay private.
         </p>
       </div>
 

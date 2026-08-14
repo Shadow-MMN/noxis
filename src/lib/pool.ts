@@ -1,21 +1,26 @@
 import { RpcProvider, type AccountInterface } from "starknet";
 
-// STRK20 privacy pool, Starknet mainnet (canonical — matches the SDK's
-// PRIVACY_POOL_ADDRESS export).
-export const POOL_ADDRESS =
-  "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a";
+// STRK20 privacy pool, per network. Mainnet matches the SDK's
+// PRIVACY_POOL_ADDRESS export; Sepolia matches SEPOLIA_PRIVACY_POOL_ADDRESS
+// and is live (get_fee_amount verified on-chain).
+export const POOL_ADDRESSES: Record<string, string> = {
+  Mainnet:
+    "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a",
+  Sepolia: "0x254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91",
+};
 
-// STRK ERC-20, Starknet mainnet.
+// STRK ERC-20 — the canonical address is the same on Mainnet and Sepolia
+// (verified on-chain: symbol "STRK", 18 decimals, on both).
 export const STRK_ADDRESS =
   "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d";
 
-// USDC.e (bridged USD Coin), Starknet mainnet — verified on-chain:
-// name "USD Coin", symbol "USDC", 6 decimals.
+// USDC.e (bridged USD Coin) — Mainnet only (verified on-chain: 6 decimals).
+// The contract does not exist on Sepolia, so USDC is hidden there.
 export const USDC_E_ADDRESS =
   "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8";
 
 export interface TokenInfo {
-  address: string;
+  addresses: Partial<Record<string, string>>;
   symbol: string;
   name: string;
   decimals: number;
@@ -23,26 +28,61 @@ export interface TokenInfo {
 
 export const TOKENS: Record<string, TokenInfo> = {
   STRK: {
-    address: STRK_ADDRESS,
+    addresses: { Mainnet: STRK_ADDRESS, Sepolia: STRK_ADDRESS },
     symbol: "STRK",
     name: "Starknet Token",
     decimals: 18,
   },
   USDC: {
-    address: USDC_E_ADDRESS,
+    addresses: { Mainnet: USDC_E_ADDRESS },
     symbol: "USDC",
     name: "USD Coin (USDC.e)",
     decimals: 6,
   },
 };
 
-export const TOKEN_LIST = Object.values(TOKENS);
+// All tokens (used as the default selector list).
+export const TOKEN_LIST: TokenInfo[] = Object.values(TOKENS);
 
-let provider: RpcProvider | undefined;
+// Tokens available on a given network (USDC.e is Mainnet-only).
+export function tokensForNetwork(network: string): TokenInfo[] {
+  return Object.values(TOKENS).filter((t) => t.addresses[network]);
+}
+
+// Resolve a token's contract address on the given network. Throws if the
+// token isn't deployed there — callers should filter via tokensForNetwork.
+export function tokenAddress(token: TokenInfo, network: string): string {
+  const addr = token.addresses[network];
+  if (!addr) {
+    throw new Error(`${token.symbol} is not available on ${network}.`);
+  }
+  return addr;
+}
+
+// Frontend RPC per network. Sepolia derives from the Alchemy key when
+// NEXT_PUBLIC_SEPOLIA_RPC_URL isn't set (same key, different host).
+export function rpcUrlFor(network: string): string {
+  const mainnet = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL;
+  if (!mainnet) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_ALCHEMY_RPC_URL — copy .env.example to .env and set your Alchemy key."
+    );
+  }
+  if (network !== "Sepolia") return mainnet;
+  const sepolia = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL;
+  if (sepolia) return sepolia;
+  return mainnet.replace("-mainnet.", "-sepolia.");
+}
+
+const providers = new Map<string, RpcProvider>();
 
 function getProvider(nodeUrl: string): RpcProvider {
-  if (!provider) provider = new RpcProvider({ nodeUrl });
-  return provider;
+  let p = providers.get(nodeUrl);
+  if (!p) {
+    p = new RpcProvider({ nodeUrl });
+    providers.set(nodeUrl, p);
+  }
+  return p;
 }
 
 async function firstResult(res: unknown): Promise<string | undefined> {
@@ -51,10 +91,14 @@ async function firstResult(res: unknown): Promise<string | undefined> {
 }
 
 // Read the flat per-operation pool fee from the pool itself (never assume it —
-// it moves on mainnet). The fee is STRK-denominated. Returns the smallest unit.
-export async function readPoolFee(nodeUrl: string): Promise<bigint> {
+// it differs per network: 6 STRK on Mainnet, 2 STRK on Sepolia). Returns the
+// smallest unit.
+export async function readPoolFee(
+  nodeUrl: string,
+  network: string
+): Promise<bigint> {
   const res = await getProvider(nodeUrl).callContract({
-    contractAddress: POOL_ADDRESS,
+    contractAddress: POOL_ADDRESSES[network] ?? POOL_ADDRESSES.Mainnet,
     entrypoint: "get_fee_amount",
     calldata: [],
   });
@@ -68,10 +112,11 @@ export async function readPoolFee(nodeUrl: string): Promise<bigint> {
 export async function readTokenBalance(
   account: AccountInterface,
   address: string,
-  token: TokenInfo
+  token: TokenInfo,
+  network: string
 ): Promise<bigint> {
   const res = await account.provider.callContract({
-    contractAddress: token.address,
+    contractAddress: tokenAddress(token, network),
     entrypoint: "balanceOf",
     calldata: [address],
   });

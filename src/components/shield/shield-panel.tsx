@@ -10,6 +10,8 @@ import {
   parseAmount,
   readPoolFee,
   readTokenBalance,
+  tokenAddress,
+  tokensForNetwork,
 } from "@/lib/pool";
 import { ConnectWallet } from "@/components/wallet/connect-button";
 import { TokenSelect } from "@/components/actions/token-select";
@@ -19,10 +21,9 @@ import {
   type TxState,
 } from "@/components/actions/tx-status";
 
-const RPC_URL = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL;
-
 export function ShieldPanel() {
-  const { walletAccount, address, isConnected, strk20Capable, network } = useWallet();
+  const { walletAccount, address, isConnected, strk20Capable, network, rpcUrl } =
+    useWallet();
 
   const [token, setToken] = useState("STRK");
   const [amount, setAmount] = useState("");
@@ -31,19 +32,25 @@ export function ShieldPanel() {
   const [tx, setTx] = useState<TxState>({ status: "idle" });
   const [busy, setBusy] = useState(false);
 
-  const info = TOKENS[token];
-  const onMainnet = network === "Mainnet";
+  // Fall back to STRK when the selected token isn't deployed on this network
+  // (USDC.e is Mainnet-only) — derived, never setState in an effect.
+  const tokens = tokensForNetwork(network);
+  const info =
+    tokens.some((t) => t.symbol === token) && token in TOKENS
+      ? TOKENS[token]
+      : TOKENS.STRK;
 
-  // Read the live pool fee (mainnet) — never assume it. STRK-denominated.
+  // Read the live pool fee on the connected network — never assume it
+  // (6 STRK on Mainnet, 2 STRK on Sepolia). STRK-denominated.
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!RPC_URL || !onMainnet) {
+      if (!rpcUrl) {
         if (!cancelled) setFee(null);
         return;
       }
       try {
-        const f = await readPoolFee(RPC_URL);
+        const f = await readPoolFee(rpcUrl, network);
         if (!cancelled) setFee(f);
       } catch {
         if (!cancelled) setFee(null);
@@ -53,15 +60,17 @@ export function ShieldPanel() {
     return () => {
       cancelled = true;
     };
-  }, [onMainnet]);
+  }, [rpcUrl, network]);
 
   // Refresh the public balance of the selected token for the MAX button.
   const refreshBalance = useCallback(() => {
-    if (!walletAccount || !address || !onMainnet) {
+    if (!walletAccount || !address) {
       return Promise.resolve(null);
     }
-    return readTokenBalance(walletAccount, address, TOKENS[token]).catch(() => null);
-  }, [walletAccount, address, onMainnet, token]);
+    return readTokenBalance(walletAccount, address, info, network).catch(
+      () => null
+    );
+  }, [walletAccount, address, info, network]);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,7 +99,11 @@ export function ShieldPanel() {
     setTx({ status: "idle" });
     try {
       const actions: WALLET_API.STRK20_ACTION[] = [
-        { type: "deposit", token: info.address, amount: num.toHex(amountWei) },
+        {
+          type: "deposit",
+          token: tokenAddress(info, network),
+          amount: num.toHex(amountWei),
+        },
       ];
       const res = await walletAccount.strk20InvokeTransaction(actions);
       const txHash = res.transaction_hash;
@@ -142,15 +155,15 @@ export function ShieldPanel() {
   return (
     <div className="max-w-xl rounded-xl border border-graphite-800 bg-graphite-850 p-6">
       <div className="flex items-center justify-between gap-4">
-        <TokenSelect value={token} onChange={setToken} />
+        <TokenSelect value={info.symbol} onChange={setToken} tokens={tokens} />
         <button
           type="button"
           onClick={handleMax}
           disabled={maxWei === null || maxWei <= 0n}
           title={
             maxWei === null
-              ? token === "STRK"
-                ? "Connect on Mainnet to use MAX"
+              ? info.symbol === "STRK"
+                ? "Connect your wallet to use MAX"
                 : "MAX is STRK-only — the pool fee is STRK-denominated"
               : `Reserves the ${fee !== null ? fmtAmount(fee, 18) : ""} STRK pool fee`
           }
@@ -193,14 +206,14 @@ export function ShieldPanel() {
             </span>
           </span>
         ) : null}
-        {!onMainnet && isConnected ? (
-          <span className="text-amber-400">
-            Fee &amp; MAX need the Mainnet pool — switch your wallet network
-          </span>
-        ) : null}
-        {token !== "STRK" && onMainnet ? (
+        {info.symbol !== "STRK" ? (
           <span className="text-graphite-500">
             reserve STRK for the pool fee
+          </span>
+        ) : null}
+        {network === "Sepolia" && isConnected ? (
+          <span className="text-amber-400">
+            Sepolia testnet — fees are play-STRK
           </span>
         ) : null}
       </div>

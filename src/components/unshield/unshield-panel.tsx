@@ -10,6 +10,8 @@ import {
   isValidAddress,
   parseAmount,
   readPoolFee,
+  tokenAddress,
+  tokensForNetwork,
 } from "@/lib/pool";
 import { ConnectWallet } from "@/components/wallet/connect-button";
 import { TokenSelect } from "@/components/actions/token-select";
@@ -19,10 +21,9 @@ import {
   type TxState,
 } from "@/components/actions/tx-status";
 
-const RPC_URL = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL;
-
 export function UnshieldPanel() {
-  const { walletAccount, address, isConnected, strk20Capable, network } = useWallet();
+  const { walletAccount, address, isConnected, strk20Capable, network, rpcUrl } =
+    useWallet();
 
   const [token, setToken] = useState("STRK");
   // User-typed override; empty means "withdraw to the connected account".
@@ -34,18 +35,23 @@ export function UnshieldPanel() {
   const [tx, setTx] = useState<TxState>({ status: "idle" });
   const [busy, setBusy] = useState(false);
 
-  const info = TOKENS[token];
+  // Fall back to STRK when the selected token isn't deployed on this network.
+  const tokens = tokensForNetwork(network);
+  const info =
+    tokens.some((t) => t.symbol === token) && token in TOKENS
+      ? TOKENS[token]
+      : TOKENS.STRK;
 
-  // Read the live pool fee (mainnet) for the fee note — never assume it.
+  // Read the live pool fee on the connected network for the fee note.
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!RPC_URL || network !== "Mainnet") {
+      if (!rpcUrl) {
         if (!cancelled) setFee(null);
         return;
       }
       try {
-        const f = await readPoolFee(RPC_URL);
+        const f = await readPoolFee(rpcUrl, network);
         if (!cancelled) setFee(f);
       } catch {
         if (!cancelled) setFee(null);
@@ -55,7 +61,7 @@ export function UnshieldPanel() {
     return () => {
       cancelled = true;
     };
-  }, [network]);
+  }, [rpcUrl, network]);
 
   const amountWei = parseAmount(amount, info.decimals);
   const recipientOk = recipient.trim() !== "" && isValidAddress(recipient);
@@ -70,7 +76,7 @@ export function UnshieldPanel() {
       const actions: WALLET_API.STRK20_ACTION[] = [
         {
           type: "withdraw",
-          token: info.address,
+          token: tokenAddress(info, network),
           amount: num.toHex(amountWei),
           recipient: recipient.trim(),
         },
@@ -123,7 +129,7 @@ export function UnshieldPanel() {
 
   return (
     <div className="max-w-xl rounded-xl border border-graphite-800 bg-graphite-850 p-6">
-      <TokenSelect value={token} onChange={setToken} />
+      <TokenSelect value={info.symbol} onChange={setToken} tokens={tokens} />
 
       <div className="mt-4">
         <label

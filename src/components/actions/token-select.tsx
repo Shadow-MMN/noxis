@@ -1,19 +1,21 @@
 "use client";
 
-import { TOKEN_LIST } from "@/lib/pool";
+import { TOKEN_LIST, type TokenInfo } from "@/lib/pool";
 
 export function TokenSelect({
   value,
   onChange,
   disabled,
+  tokens = TOKEN_LIST,
 }: {
   value: string;
   onChange: (symbol: string) => void;
   disabled?: boolean;
+  tokens?: TokenInfo[];
 }) {
   return (
     <div className="flex gap-1 rounded-lg border border-graphite-700 bg-graphite-800 p-1">
-      {TOKEN_LIST.map((t) => (
+      {tokens.map((t) => (
         <button
           key={t.symbol}
           type="button"

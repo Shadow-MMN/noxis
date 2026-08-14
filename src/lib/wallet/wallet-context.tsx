@@ -12,8 +12,7 @@ import {
 import { constants, validateAndParseAddress, WalletAccountV6, walletV6 } from "starknet";
 import { createStore, type Store } from "@starknet-io/get-starknet-discovery";
 import type { WalletWithStarknetFeatures } from "@starknet-io/get-starknet-wallet-standard/features";
-
-const RPC_URL = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL;
+import { rpcUrlFor } from "@/lib/pool";
 
 // Lazy singleton discovery store — created once, shared across mounts.
 // eip1193Adapters: [] keeps MetaMask's Snap probing out of discovery entirely.
@@ -21,6 +20,23 @@ let store: Store | undefined;
 function getStore(): Store {
   if (!store) store = createStore({ eip1193Adapters: [] });
   return store;
+}
+
+// useSyncExternalStore requires a referentially stable snapshot: if the
+// snapshot is a fresh array on every render, React re-renders forever. The
+// discovery store's getWallets() clones the array every call, so cache the
+// snapshot and only swap it when the wallet list actually changes (element
+// identity — wallets are stable objects until they're replaced).
+let cachedWallets: WalletWithStarknetFeatures[] = [];
+function getWalletsSnapshot(): WalletWithStarknetFeatures[] {
+  const next = getStore().getWallets();
+  if (
+    next.length !== cachedWallets.length ||
+    next.some((w, i) => w !== cachedWallets[i])
+  ) {
+    cachedWallets = next;
+  }
+  return cachedWallets;
 }
 
 // STRK20-capable if the wallet supports the Privacy Wallet API >= 0.10.
@@ -50,6 +66,7 @@ interface WalletContextValue {
   address: string;
   chainId: string;
   network: string;
+  rpcUrl: string;
   isConnected: boolean;
   connecting: boolean;
   error: string;
@@ -66,8 +83,8 @@ const WalletContext = createContext<WalletContextValue | null>(null);
 export function WalletProvider({ children }: { children: ReactNode }) {
   const wallets = useSyncExternalStore(
     useCallback((onChange: () => void) => getStore().subscribe(onChange), []),
-    useCallback(() => getStore().getWallets().slice(), []),
-    useCallback(() => getStore().getWallets().slice(), [])
+    getWalletsSnapshot,
+    getWalletsSnapshot
   );
   const [walletAccount, setWalletAccount] = useState<WalletAccountV6 | undefined>();
   const [address, setAddress] = useState("");
@@ -82,12 +99,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setError("");
     setConnecting(true);
     try {
-      if (!RPC_URL) {
-        throw new Error(
-          "Missing NEXT_PUBLIC_ALCHEMY_RPC_URL — copy .env.example to .env and set your Alchemy key."
-        );
+      // Ask the wallet which chain it's on first, then connect the
+      // WalletAccount against that network's RPC so reads and waits target
+      // the right chain (testnet-first: Sepolia must not hit a mainnet RPC).
+      let network = "Mainnet";
+      try {
+        const id = (await walletV6.requestChainId(selected)) as string;
+        network = networkName(id);
+        setChainId(id);
+      } catch {
+        /* wallet unreachable — keep the mainnet default */
       }
-      const myWA = await WalletAccountV6.connect({ nodeUrl: RPC_URL }, selected);
+      const myWA = await WalletAccountV6.connect(
+        { nodeUrl: rpcUrlFor(network) },
+        selected
+      );
       setWalletAccount(myWA);
 
       const accounts = await walletV6.requestAccounts(selected);
@@ -140,6 +166,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       address,
       chainId,
       network: networkName(chainId),
+      rpcUrl: (() => {
+        try {
+          return rpcUrlFor(networkName(chainId));
+        } catch {
+          return "";
+        }
+      })(),
       isConnected,
       connecting,
       error,

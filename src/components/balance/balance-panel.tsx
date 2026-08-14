@@ -2,17 +2,23 @@
 
 import { useState } from "react";
 import { useWallet } from "@/lib/wallet/wallet-context";
-import { TOKEN_LIST, fmtAmount } from "@/lib/pool";
+import {
+  fmtAmount,
+  tokenAddress,
+  tokensForNetwork,
+} from "@/lib/pool";
 import { ConnectWallet } from "@/components/wallet/connect-button";
-
-// Read the user's own shielded balances through the wallet (consent-gated).
-// Least privilege: request only the tokens Noxis moves, never probe everything.
-const WATCHED = TOKEN_LIST.map((t) => t.address);
 
 type Balances = Record<string, bigint>;
 
 export function BalancePanel() {
-  const { walletAccount, address, isConnected, strk20Capable } = useWallet();
+  const { walletAccount, address, isConnected, strk20Capable, network } =
+    useWallet();
+
+  // Read the user's own shielded balances through the wallet (consent-gated).
+  // Least privilege: request only the tokens Noxis moves on this network.
+  const tokens = tokensForNetwork(network);
+  const watched = tokens.map((t) => tokenAddress(t, network));
 
   const [balances, setBalances] = useState<Balances | null>(null);
   const [loading, setLoading] = useState(false);
@@ -23,7 +29,7 @@ export function BalancePanel() {
     setLoading(true);
     setError("");
     try {
-      const entries = await walletAccount.strk20Balances(WATCHED);
+      const entries = await walletAccount.strk20Balances(watched);
       const map: Balances = {};
       for (const e of entries ?? []) {
         const token =
@@ -79,8 +85,8 @@ export function BalancePanel() {
     <div className="rounded-xl border border-graphite-800 bg-graphite-850 p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 space-y-3">
-          {TOKEN_LIST.map((t) => {
-            const wei = balances?.[t.address];
+          {tokens.map((t) => {
+            const wei = balances?.[tokenAddress(t, network)];
             return (
               <div key={t.symbol} className="flex items-baseline justify-between">
                 <span className="text-xs font-medium tracking-wide text-graphite-400">

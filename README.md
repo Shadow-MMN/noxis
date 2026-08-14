@@ -26,6 +26,7 @@ Noxis is a private payments app built for the [STRK20 Private Sprint](https://gi
 - [x] Wallet picker (Ready X / Xverse, with graceful degradation)
 - [x] Shield / private transfer / unshield flows (live pool fee, clear tx states)
 - [x] Shielded balance reads (wallet-mediated, consent-gated)
+- [x] Testnet-first: works on Sepolia (pool fee 2 STRK, play-STRK from a faucet); USDC is Mainnet-only
 - [ ] Mainnet transactions + `strk20.json` fields filled in (gated on owner approval)
 
 ## Getting started
@@ -41,10 +42,12 @@ Mainnet RPC requires a free [Alchemy](https://www.alchemy.com) key. Copy `.env.e
 
 ```
 NEXT_PUBLIC_ALCHEMY_RPC_URL=https://starknet-mainnet.g.alchemy.com/v2/<YOUR_ALCHEMY_KEY>
+NEXT_PUBLIC_SEPOLIA_RPC_URL=
 AVNU_PAYMASTER_API_KEY=<YOUR_AVNU_PAYMASTER_API_KEY>
 ```
 
 - `NEXT_PUBLIC_ALCHEMY_RPC_URL` — Starknet mainnet RPC (Alchemy).
+- `NEXT_PUBLIC_SEPOLIA_RPC_URL` — optional Sepolia RPC; if blank, the app derives it from the mainnet key (same Alchemy key, `-sepolia.` host).
 - `AVNU_PAYMASTER_API_KEY` — AVNU Portal key for private swaps (https://portal.avnu.fi). Server-side only; the app proxies it through `/api/private-swap` and never ships it to the browser. Leave empty to use shield/transfer/unshield without swaps.
 
 Never commit `.env.local` — it is gitignored.
