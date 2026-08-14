@@ -2,6 +2,7 @@ import { ConnectWallet } from "@/components/wallet/connect-button";
 import { ShieldPanel } from "@/components/shield/shield-panel";
 import { TransferPanel } from "@/components/transfer/transfer-panel";
 import { UnshieldPanel } from "@/components/unshield/unshield-panel";
+import { BalancePanel } from "@/components/balance/balance-panel";
 
 const POOL_ADDRESS =
   "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a";
@@ -74,13 +75,27 @@ export default function Home() {
               Registered — STRK20 Private Sprint
             </span>
             <span className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-copper-400" />
-              Integration plan — next
+              <span className="h-1.5 w-1.5 rounded-full bg-sage-500" />
+              Shield · Transfer · Unshield — live
             </span>
             <span className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-graphite-600" />
-              Mainnet live — pending
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Mainnet txs — pending your go-ahead
             </span>
+          </div>
+        </section>
+
+        {/* Shielded balance */}
+        <section id="balance" className="mt-16">
+          <h2 className="text-2xl font-semibold tracking-tight text-graphite-50">
+            Your shielded balance
+          </h2>
+          <p className="mt-3 max-w-xl text-graphite-300">
+            Only you can see what you hold in the pool. Reveals are read
+            through your wallet, never through Noxis.
+          </p>
+          <div className="mt-8">
+            <BalancePanel />
           </div>
         </section>
 

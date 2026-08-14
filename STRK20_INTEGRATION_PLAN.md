@@ -65,7 +65,7 @@ Limit, stated plainly: deposit/withdrawal amounts and the timing of pool interac
 4. **Normalize addresses before comparing** (`BigInt(a) === BigInt(b)`) — felts have many valid spellings; string equality duplicates list entries.
 5. Verify headless + manual Ready X check at every handoff.
 
-## 8. Phase 4 — Shielded balances, polish, demo
+## 8. Phase 4 — Shielded balances, polish, demo ✅ done 2026-08-14
 
 1. Shielded balance reads via `WalletAccountV6.strk20Balances(tokens)` — consent-gated by the wallet; confirm consent behavior against Ready X before designing the panel (least privilege: request only the tokens the screen shows).
 2. Polish transaction states (pending / confirmed / failed stay legible — copper/sage/amber per the design system), honest hidden-vs-visible copy per flow.
@@ -95,6 +95,7 @@ Limit, stated plainly: deposit/withdrawal amounts and the timing of pool interac
 
 - Ready X wallet naming/status (Argent rebrand — user-confirmed STRK20-capable; confirm it surfaces in get-starknet v6 discovery).
 - Version drift (2026-08-14): discovery/wallet-standard pinned to 6.0.2, not the skill's 6.0.3 — starknet 10.4.0 types require 6.0.2 (see §4).
+- Demo recording is a manual step: script at `docs/DEMO_SCRIPT.md`. Record, then set `demo_video` in `strk20.json`; `demo_url` only if the hub misses the Vercel deploy.
 - Xverse dapp-facing Wallet API status.
 - Whether a testnet STRK20 pool exists.
 - Current `starknet` / get-starknet dist-tags (STRK20-era releases live on the npm `next` tag).

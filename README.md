@@ -20,10 +20,11 @@ Noxis is a private payments app built for the [STRK20 Private Sprint](https://gi
 
 - [x] Next.js + Tailwind scaffold, Noxis UI foundation (graphite + copper/amber)
 - [x] Registered for the STRK20 Private Sprint
-- [ ] STRK20 integration plan (skill-driven)
-- [ ] Wallet picker
-- [ ] Shield / unshield / private transfer flows
-- [ ] Mainnet transactions + `strk20.json` fields filled in
+- [x] STRK20 integration plan (skill-driven)
+- [x] Wallet picker (Ready X / Xverse, with graceful degradation)
+- [x] Shield / private transfer / unshield flows (live pool fee, clear tx states)
+- [x] Shielded balance reads (wallet-mediated, consent-gated)
+- [ ] Mainnet transactions + `strk20.json` fields filled in (gated on owner approval)
 
 ## Getting started
 
