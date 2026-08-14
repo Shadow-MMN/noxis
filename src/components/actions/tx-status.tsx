@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { explorerTxUrl } from "@/lib/pool";
 
 export type TxState =
@@ -12,6 +13,24 @@ export type TxState =
 
 export function isScreeningError(message: string): boolean {
   return /screen/i.test(message);
+}
+
+function CopyHash({ txHash }: { txHash: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard?.writeText(txHash).catch(() => {});
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      className="font-mono text-xs text-graphite-400 transition-colors hover:text-copper-300"
+      title="Copy transaction hash"
+    >
+      {copied ? "copied ✓" : "copy hash"}
+    </button>
+  );
 }
 
 export function TxStatusCard({
@@ -30,14 +49,17 @@ export function TxStatusCard({
             ? "Waiting for confirmation — proof generation can take a moment…"
             : "Submitted — confirmation pending on-chain. Check the explorer."}
         </p>
-        <a
-          href={explorerTxUrl(tx.txHash, network)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-1 block font-mono text-xs text-copper-300 underline underline-offset-2"
-        >
-          {tx.txHash.slice(0, 10)}…{tx.txHash.slice(-6)} ↗
-        </a>
+        <div className="mt-1 flex items-center gap-3">
+          <a
+            href={explorerTxUrl(tx.txHash, network)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-xs text-copper-300 underline underline-offset-2"
+          >
+            {tx.txHash.slice(0, 10)}…{tx.txHash.slice(-6)} ↗
+          </a>
+          <CopyHash txHash={tx.txHash} />
+        </div>
       </div>
     );
   }
@@ -52,14 +74,17 @@ export function TxStatusCard({
         {tx.note ? (
           <p className="mt-1 text-xs leading-5 text-graphite-400">{tx.note}</p>
         ) : null}
-        <a
-          href={explorerTxUrl(tx.txHash, network)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-1 block font-mono text-xs text-copper-300 underline underline-offset-2"
-        >
-          {tx.txHash.slice(0, 10)}…{tx.txHash.slice(-6)} ↗
-        </a>
+        <div className="mt-1 flex items-center gap-3">
+          <a
+            href={explorerTxUrl(tx.txHash, network)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-xs text-copper-300 underline underline-offset-2"
+          >
+            {tx.txHash.slice(0, 10)}…{tx.txHash.slice(-6)} ↗
+          </a>
+          <CopyHash txHash={tx.txHash} />
+        </div>
       </div>
     );
   }
