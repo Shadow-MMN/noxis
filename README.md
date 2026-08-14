@@ -9,6 +9,8 @@ Noxis is a private payments app built for the [STRK20 Private Sprint](https://gi
 - **Shield** — deposit STRK into the STRK20 pool and mint a private note only you can spend.
 - **Unshield** — redeem a note back to a fresh account, breaking the link to the deposit.
 - **Private transfer** — move value from one note to another with no on-chain link between sender and recipient.
+- **Private swap** — trade shielded tokens (e.g. USDC → STRK) through AVNU without leaving the pool; gas is sponsored, the pool fee comes from your shielded balance.
+- **Shielded balances** — see your pool balances via wallet-mediated reads (consent-gated).
 - **Clear transaction states** — pending / confirmed / failed are always legible, even though the underlying details stay private.
 
 ## What is and isn't private
@@ -39,7 +41,11 @@ Mainnet RPC requires a free [Alchemy](https://www.alchemy.com) key. Copy `.env.e
 
 ```
 NEXT_PUBLIC_ALCHEMY_RPC_URL=https://starknet-mainnet.g.alchemy.com/v2/<YOUR_ALCHEMY_KEY>
+AVNU_PAYMASTER_API_KEY=<YOUR_AVNU_PAYMASTER_API_KEY>
 ```
+
+- `NEXT_PUBLIC_ALCHEMY_RPC_URL` — Starknet mainnet RPC (Alchemy).
+- `AVNU_PAYMASTER_API_KEY` — AVNU Portal key for private swaps (https://portal.avnu.fi). Server-side only; the app proxies it through `/api/private-swap` and never ships it to the browser. Leave empty to use shield/transfer/unshield without swaps.
 
 Never commit `.env.local` — it is gitignored.
 

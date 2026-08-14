@@ -5,25 +5,33 @@ import { num } from "starknet";
 import type { WALLET_API } from "@starknet-io/types-js";
 import { useWallet } from "@/lib/wallet/wallet-context";
 import {
-  STRK_ADDRESS,
-  fmtStrk,
+  TOKENS,
+  fmtAmount,
   isValidAddress,
+  parseAmount,
   readPoolFee,
-  strkToWei,
 } from "@/lib/pool";
 import { ConnectWallet } from "@/components/wallet/connect-button";
-import { TxStatusCard, isScreeningError, type TxState } from "@/components/actions/tx-status";
+import { TokenSelect } from "@/components/actions/token-select";
+import {
+  TxStatusCard,
+  isScreeningError,
+  type TxState,
+} from "@/components/actions/tx-status";
 
 const RPC_URL = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL;
 
 export function TransferPanel() {
   const { walletAccount, address, isConnected, strk20Capable, network } = useWallet();
 
+  const [token, setToken] = useState("STRK");
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [fee, setFee] = useState<bigint | null>(null);
   const [tx, setTx] = useState<TxState>({ status: "idle" });
   const [busy, setBusy] = useState(false);
+
+  const info = TOKENS[token];
 
   // Read the live pool fee (mainnet) for the fee note — never assume it.
   useEffect(() => {
@@ -46,7 +54,7 @@ export function TransferPanel() {
     };
   }, [network]);
 
-  const amountWei = strkToWei(amount);
+  const amountWei = parseAmount(amount, info.decimals);
   const recipientOk = recipient.trim() !== "" && isValidAddress(recipient);
   const recipientIsSelf =
     recipientOk && address !== "" && BigInt(recipient) === BigInt(address);
@@ -59,7 +67,7 @@ export function TransferPanel() {
       const actions: WALLET_API.STRK20_ACTION[] = [
         {
           type: "transfer",
-          token: STRK_ADDRESS,
+          token: info.address,
           amount: num.toHex(amountWei),
           recipient: recipient.trim(),
         },
@@ -75,7 +83,7 @@ export function TransferPanel() {
         setTx({
           status: "confirmed",
           txHash,
-          detail: `Sent ${fmtStrk(amountWei)} STRK privately ✓`,
+          detail: `Sent ${fmtAmount(amountWei, info.decimals)} ${info.symbol} privately ✓`,
         });
       } catch {
         setTx({ status: "submitted", txHash });
@@ -111,7 +119,9 @@ export function TransferPanel() {
 
   return (
     <div className="max-w-xl rounded-xl border border-graphite-800 bg-graphite-850 p-6">
-      <div>
+      <TokenSelect value={token} onChange={setToken} />
+
+      <div className="mt-4">
         <label
           htmlFor="transfer-recipient"
           className="block text-xs font-medium tracking-wide text-graphite-400"
@@ -143,7 +153,7 @@ export function TransferPanel() {
           htmlFor="transfer-amount"
           className="block text-xs font-medium tracking-wide text-graphite-400"
         >
-          AMOUNT (STRK)
+          AMOUNT ({info.symbol})
         </label>
         <input
           id="transfer-amount"
@@ -158,7 +168,7 @@ export function TransferPanel() {
 
       <p className="mt-3 text-xs leading-5 text-graphite-400">
         {fee !== null
-          ? `Pool fee ≈ ${fmtStrk(fee)} STRK applies to this transfer. `
+          ? `Pool fee ≈ ${fmtAmount(fee, 18)} STRK (STRK-denominated) applies. `
           : ""}
         Only matured notes are spendable — notes settle ~10 blocks after
         shielding.

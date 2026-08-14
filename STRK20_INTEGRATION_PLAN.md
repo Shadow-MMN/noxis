@@ -71,7 +71,7 @@ Limit, stated plainly: deposit/withdrawal amounts and the timing of pool interac
 2. Polish transaction states (pending / confirmed / failed stay legible — copper/sage/amber per the design system), honest hidden-vs-visible copy per flow.
 3. Record the 3-minute demo (test amounts, testnet where possible), add `demo_video` + `demo_url` to `strk20.json` (Vercel deploy auto-detected for `demo_url`).
 
-## 9. Phase 5 — Mainnet: the three required transactions *(gated)*
+## 9. Phase 5 — Mainnet: the three required transactions *(gated)* 🚧 in progress 2026-08-14 — each transaction requires the owner's explicit go-ahead at the moment of sending
 
 - **Entry criterion:** Phases 1–4 verified with Ready X; your explicit approval.
 - Exactly **three mainnet transactions touching the pool** at `0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a` — shield, private transfer, unshield, in minimal amounts.
@@ -91,7 +91,15 @@ Limit, stated plainly: deposit/withdrawal amounts and the timing of pool interac
 - Selective disclosure exists for legitimate regulatory requests; it is not automatic compliance and carries no regulator endorsement — Noxis owns its own legal/compliance decisions and any use-case KYC.
 - No key material, ever: viewing keys / private keys / API keys stay out of files (`.env` gitignored — verified). Env-var placeholders only.
 
-## 12. Open items to re-verify at build time
+## 12. Scope addition 2026-08-14 — USDC + private swaps
+
+Owner request: add USDC and an in-app private swap.
+
+- **USDC.e (bridged)** added as a second token across shield/transfer/unshield/balance — address `0x053c9125…68a8` verified on-chain (symbol USDC, 6 decimals; amount parsing is now decimal-aware per token). Native USDC (Circle, Dec 2025) not yet wired — no verified address in reachable docs; add from the wallet's own token list when needed.
+- **Private swap** via AVNU first-party route (no anonymizer contract): `@avnu/avnu-sdk@4.2.0`, `getQuotes` → `quoteToCalls({ private: true })` → wallet prover (`createStrk20WalletProver`) client-side → `submitPrivateSwap` behind `/api/private-swap` (paymaster key server-side only). Requires an **AVNU Portal paymaster key** (`AVNU_PAYMASTER_API_KEY` in env) — without it the swap surfaces a clear error. Quote flow verified headlessly (USDC→STRK routes via JediSwap on mainnet).
+- Open item: pool-fee settlement for non-STRK operations (fee is STRK-denominated; MAX is therefore STRK-only).
+
+## 13. Open items to re-verify at build time
 
 - Ready X wallet naming/status (Argent rebrand — user-confirmed STRK20-capable; confirm it surfaces in get-starknet v6 discovery).
 - Version drift (2026-08-14): discovery/wallet-standard pinned to 6.0.2, not the skill's 6.0.3 — starknet 10.4.0 types require 6.0.2 (see §4).

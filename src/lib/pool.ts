@@ -1,14 +1,42 @@
 import { RpcProvider, type AccountInterface } from "starknet";
 
-// STRK20 privacy pool, Starknet mainnet (canonical).
+// STRK20 privacy pool, Starknet mainnet (canonical — matches the SDK's
+// PRIVACY_POOL_ADDRESS export).
 export const POOL_ADDRESS =
   "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a";
 
-// STRK ERC-20 on Starknet mainnet.
+// STRK ERC-20, Starknet mainnet.
 export const STRK_ADDRESS =
   "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d";
 
-export const STRK_DECIMALS = 18;
+// USDC.e (bridged USD Coin), Starknet mainnet — verified on-chain:
+// name "USD Coin", symbol "USDC", 6 decimals.
+export const USDC_E_ADDRESS =
+  "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8";
+
+export interface TokenInfo {
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+}
+
+export const TOKENS: Record<string, TokenInfo> = {
+  STRK: {
+    address: STRK_ADDRESS,
+    symbol: "STRK",
+    name: "Starknet Token",
+    decimals: 18,
+  },
+  USDC: {
+    address: USDC_E_ADDRESS,
+    symbol: "USDC",
+    name: "USD Coin (USDC.e)",
+    decimals: 6,
+  },
+};
+
+export const TOKEN_LIST = Object.values(TOKENS);
 
 let provider: RpcProvider | undefined;
 
@@ -17,28 +45,13 @@ function getProvider(nodeUrl: string): RpcProvider {
   return provider;
 }
 
-// Read a user's public STRK balance (ERC-20 balanceOf). starknet.js v10 has no
-// Account.getBalance — the call goes through the wallet account's provider.
 async function firstResult(res: unknown): Promise<string | undefined> {
   const arr = res as { result?: string[] } | string[] | null;
   return Array.isArray(arr) ? arr[0] : arr?.result?.[0];
 }
 
-export async function readStrkBalance(
-  account: AccountInterface,
-  address: string
-): Promise<bigint> {
-  const res = await account.provider.callContract({
-    contractAddress: STRK_ADDRESS,
-    entrypoint: "balanceOf",
-    calldata: [address],
-  });
-  const raw = await firstResult(res);
-  return BigInt(raw ?? "0");
-}
-
 // Read the flat per-operation pool fee from the pool itself (never assume it —
-// it moves on mainnet). Returns wei (smallest unit).
+// it moves on mainnet). The fee is STRK-denominated. Returns the smallest unit.
 export async function readPoolFee(nodeUrl: string): Promise<bigint> {
   const res = await getProvider(nodeUrl).callContract({
     contractAddress: POOL_ADDRESS,
@@ -48,6 +61,22 @@ export async function readPoolFee(nodeUrl: string): Promise<bigint> {
   const raw = await firstResult(res);
   if (!raw) throw new Error("Pool returned no fee.");
   return BigInt(raw);
+}
+
+// Read a user's public balance of `token` (ERC-20 balanceOf). starknet.js v10
+// has no Account.getBalance — the call goes through the account's provider.
+export async function readTokenBalance(
+  account: AccountInterface,
+  address: string,
+  token: TokenInfo
+): Promise<bigint> {
+  const res = await account.provider.callContract({
+    contractAddress: token.address,
+    entrypoint: "balanceOf",
+    calldata: [address],
+  });
+  const raw = await firstResult(res);
+  return BigInt(raw ?? "0");
 }
 
 // Basic Starknet address validation: 0x-prefixed hex, non-zero.
@@ -61,27 +90,28 @@ export function isValidAddress(input: string): boolean {
   }
 }
 
-// Parse a user amount string ("1.5") into the smallest unit. Returns null on
-// invalid input (including more than 18 decimals).
-export function strkToWei(input: string): bigint | null {
+// Parse a user amount string ("1.5") into the token's smallest unit. Returns
+// null on invalid input (including more decimals than the token supports).
+export function parseAmount(input: string, decimals: number): bigint | null {
   const s = input.trim();
   if (s === "" || s === "." || !/^\d*(\.\d*)?$/.test(s)) return null;
   const [whole, frac = ""] = s.split(".");
-  if (frac.length > STRK_DECIMALS) return null;
-  const scale = BigInt(10) ** BigInt(STRK_DECIMALS);
-  const wei = BigInt(whole || "0") * scale + BigInt(frac.padEnd(STRK_DECIMALS, "0") || "0");
+  if (frac.length > decimals) return null;
+  const scale = BigInt(10) ** BigInt(decimals);
+  const wei =
+    BigInt(whole || "0") * scale + BigInt(frac.padEnd(decimals, "0") || "0");
   return wei;
 }
 
-// Format a wei amount as a human STRK string ("1.5", "0.25").
-export function fmtStrk(wei: bigint): string {
+// Format a smallest-unit amount as a human string ("1.5", "0.25").
+export function fmtAmount(wei: bigint, decimals: number): string {
   const negative = wei < 0n;
   const abs = negative ? -wei : wei;
-  const scale = BigInt(10) ** BigInt(STRK_DECIMALS);
+  const scale = BigInt(10) ** BigInt(decimals);
   const whole = abs / scale;
   const frac = (abs % scale)
     .toString()
-    .padStart(STRK_DECIMALS, "0")
+    .padStart(decimals, "0")
     .replace(/0+$/, "");
   return `${negative ? "-" : ""}${whole}${frac ? `.${frac}` : ""}`;
 }

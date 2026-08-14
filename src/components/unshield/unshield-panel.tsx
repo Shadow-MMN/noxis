@@ -5,20 +5,26 @@ import { num } from "starknet";
 import type { WALLET_API } from "@starknet-io/types-js";
 import { useWallet } from "@/lib/wallet/wallet-context";
 import {
-  STRK_ADDRESS,
-  fmtStrk,
+  TOKENS,
+  fmtAmount,
   isValidAddress,
+  parseAmount,
   readPoolFee,
-  strkToWei,
 } from "@/lib/pool";
 import { ConnectWallet } from "@/components/wallet/connect-button";
-import { TxStatusCard, isScreeningError, type TxState } from "@/components/actions/tx-status";
+import { TokenSelect } from "@/components/actions/token-select";
+import {
+  TxStatusCard,
+  isScreeningError,
+  type TxState,
+} from "@/components/actions/tx-status";
 
 const RPC_URL = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL;
 
 export function UnshieldPanel() {
   const { walletAccount, address, isConnected, strk20Capable, network } = useWallet();
 
+  const [token, setToken] = useState("STRK");
   // User-typed override; empty means "withdraw to the connected account".
   // Derived (not copied into state) so a fresh account can break the link.
   const [override, setOverride] = useState("");
@@ -27,6 +33,8 @@ export function UnshieldPanel() {
   const [fee, setFee] = useState<bigint | null>(null);
   const [tx, setTx] = useState<TxState>({ status: "idle" });
   const [busy, setBusy] = useState(false);
+
+  const info = TOKENS[token];
 
   // Read the live pool fee (mainnet) for the fee note — never assume it.
   useEffect(() => {
@@ -49,7 +57,7 @@ export function UnshieldPanel() {
     };
   }, [network]);
 
-  const amountWei = strkToWei(amount);
+  const amountWei = parseAmount(amount, info.decimals);
   const recipientOk = recipient.trim() !== "" && isValidAddress(recipient);
   const recipientIsSelf =
     recipientOk && address !== "" && BigInt(recipient) === BigInt(address);
@@ -62,7 +70,7 @@ export function UnshieldPanel() {
       const actions: WALLET_API.STRK20_ACTION[] = [
         {
           type: "withdraw",
-          token: STRK_ADDRESS,
+          token: info.address,
           amount: num.toHex(amountWei),
           recipient: recipient.trim(),
         },
@@ -78,7 +86,7 @@ export function UnshieldPanel() {
         setTx({
           status: "confirmed",
           txHash,
-          detail: `Unshielded ${fmtStrk(amountWei)} STRK ✓`,
+          detail: `Unshielded ${fmtAmount(amountWei, info.decimals)} ${info.symbol} ✓`,
           note: "The withdrawal amount is public — anyone can see this leg.",
         });
       } catch {
@@ -115,7 +123,9 @@ export function UnshieldPanel() {
 
   return (
     <div className="max-w-xl rounded-xl border border-graphite-800 bg-graphite-850 p-6">
-      <div>
+      <TokenSelect value={token} onChange={setToken} />
+
+      <div className="mt-4">
         <label
           htmlFor="unshield-recipient"
           className="block text-xs font-medium tracking-wide text-graphite-400"
@@ -149,7 +159,7 @@ export function UnshieldPanel() {
           htmlFor="unshield-amount"
           className="block text-xs font-medium tracking-wide text-graphite-400"
         >
-          AMOUNT (STRK)
+          AMOUNT ({info.symbol})
         </label>
         <input
           id="unshield-amount"
@@ -164,7 +174,7 @@ export function UnshieldPanel() {
 
       <p className="mt-3 text-xs leading-5 text-graphite-400">
         {fee !== null
-          ? `Pool fee ≈ ${fmtStrk(fee)} STRK applies to this withdrawal. `
+          ? `Pool fee ≈ ${fmtAmount(fee, 18)} STRK (STRK-denominated) applies. `
           : ""}
         The withdrawal amount is public — that&apos;s the ERC-20 leg back to
         transparent Starknet.

@@ -3,6 +3,7 @@ import { ShieldPanel } from "@/components/shield/shield-panel";
 import { TransferPanel } from "@/components/transfer/transfer-panel";
 import { UnshieldPanel } from "@/components/unshield/unshield-panel";
 import { BalancePanel } from "@/components/balance/balance-panel";
+import { SwapPanel } from "@/components/swap/swap-panel";
 
 const POOL_ADDRESS =
   "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a";
@@ -153,6 +154,22 @@ export default function Home() {
           </p>
           <div className="mt-8">
             <ShieldPanel />
+          </div>
+        </section>
+
+        {/* Private swap */}
+        <section id="swap" className="mt-24">
+          <h2 className="text-2xl font-semibold tracking-tight text-graphite-50">
+            Swap privately
+          </h2>
+          <p className="mt-3 max-w-xl text-graphite-300">
+            Trade one shielded token for another through AVNU — your sell token
+            stays private, and the bought token lands back in your shielded
+            balance. Gas is sponsored; the pool fee comes from your shielded
+            balance.
+          </p>
+          <div className="mt-8">
+            <SwapPanel />
           </div>
         </section>
 
