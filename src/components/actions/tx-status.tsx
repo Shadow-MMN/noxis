@@ -103,12 +103,22 @@ export function TxStatusCard({
   }
 
   if (tx.status === "failed") {
+    const notRegistered = /NOT_REGISTERED/.test(tx.detail);
     return (
       <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3">
         <p className="text-sm text-red-300">Transaction failed</p>
         <p className="mt-1 break-all font-mono text-xs text-graphite-400">
           {tx.detail}
         </p>
+        {notRegistered ? (
+          <p className="mt-2 text-xs leading-5 text-amber-300">
+            Your account isn&apos;t registered with the privacy pool yet. Deploy
+            it first: open your wallet, send any tiny transaction (e.g. 0.001
+            STRK to any address — even your own), then retry. On a fresh
+            testnet account the wallet can&apos;t register you until the account
+            is deployed.
+          </p>
+        ) : null}
       </div>
     );
   }
