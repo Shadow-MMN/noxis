@@ -112,11 +112,10 @@ export function TxStatusCard({
         </p>
         {notRegistered ? (
           <p className="mt-2 text-xs leading-5 text-amber-300">
-            Your account isn&apos;t registered with the privacy pool yet. Deploy
-            it first: open your wallet, send any tiny transaction (e.g. 0.001
-            STRK to any address — even your own), then retry. On a fresh
-            testnet account the wallet can&apos;t register you until the account
-            is deployed.
+            Privacy isn&apos;t activated for your account yet — and only your
+            wallet can do that, once, for a tiny STRK fee. Open the wallet,
+            pick the asset, tap its shield button, and confirm the
+            &quot;activate privacy capabilities&quot; prompt. Then retry here.
           </p>
         ) : null}
       </div>
