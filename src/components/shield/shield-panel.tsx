@@ -6,27 +6,19 @@ import type { WALLET_API } from "@starknet-io/types-js";
 import { useWallet } from "@/lib/wallet/wallet-context";
 import {
   STRK_ADDRESS,
-  explorerTxUrl,
   fmtStrk,
   readPoolFee,
   readStrkBalance,
   strkToWei,
 } from "@/lib/pool";
 import { ConnectWallet } from "@/components/wallet/connect-button";
+import {
+  TxStatusCard,
+  isScreeningError,
+  type TxState,
+} from "@/components/actions/tx-status";
 
 const RPC_URL = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL;
-
-type TxState =
-  | { status: "idle" }
-  | { status: "pending"; txHash: string }
-  | { status: "submitted"; txHash: string }
-  | { status: "confirmed"; txHash: string; amount: string }
-  | { status: "declined"; txHash: string; detail: string }
-  | { status: "failed"; detail: string };
-
-function isScreeningError(message: string): boolean {
-  return /screen/i.test(message);
-}
 
 export function ShieldPanel() {
   const { walletAccount, address, isConnected, strk20Capable, network } = useWallet();
@@ -107,7 +99,8 @@ export function ShieldPanel() {
         setTx({
           status: "confirmed",
           txHash,
-          amount: fmtStrk(amountWei),
+          detail: `Shielded ${fmtStrk(amountWei)} STRK ✓`,
+          note: "Your note matures in ~10 blocks before it can be spent — you'll see it in private transfers shortly after.",
         });
       } catch {
         // Relayed txs can lag your RPC — treat the ceiling as "submitted"
@@ -233,65 +226,7 @@ export function ShieldPanel() {
       </div>
 
       {/* Transaction state */}
-      {tx.status === "pending" || tx.status === "submitted" ? (
-        <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-          <p className="flex items-center gap-2 text-sm text-amber-300">
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
-            {tx.status === "pending"
-              ? "Waiting for confirmation — proof generation can take a moment…"
-              : "Submitted — confirmation pending on-chain. Check the explorer."}
-          </p>
-          <a
-            href={explorerTxUrl(tx.txHash, network)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 block font-mono text-xs text-copper-300 underline underline-offset-2"
-          >
-            {tx.txHash.slice(0, 10)}…{tx.txHash.slice(-6)} ↗
-          </a>
-        </div>
-      ) : null}
-
-      {tx.status === "confirmed" ? (
-        <div className="mt-4 rounded-lg border border-sage-500/30 bg-sage-500/10 px-4 py-3">
-          <p className="flex items-center gap-2 text-sm text-sage-400">
-            <span className="inline-block h-2 w-2 rounded-full bg-sage-500" />
-            Shielded {tx.amount} STRK ✓
-          </p>
-          <p className="mt-1 text-xs leading-5 text-graphite-400">
-            Your note matures in ~10 blocks before it can be spent — you&apos;ll
-            see it in private transfers shortly after.
-          </p>
-          <a
-            href={explorerTxUrl(tx.txHash, network)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 block font-mono text-xs text-copper-300 underline underline-offset-2"
-          >
-            {tx.txHash.slice(0, 10)}…{tx.txHash.slice(-6)} ↗
-          </a>
-        </div>
-      ) : null}
-
-      {tx.status === "declined" ? (
-        <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-          <p className="text-sm text-amber-300">
-            Deposit declined by screening — a protocol outcome, not an app bug.
-          </p>
-          <p className="mt-1 break-all font-mono text-xs text-graphite-400">
-            {tx.detail}
-          </p>
-        </div>
-      ) : null}
-
-      {tx.status === "failed" ? (
-        <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3">
-          <p className="text-sm text-red-300">Shield failed</p>
-          <p className="mt-1 break-all font-mono text-xs text-graphite-400">
-            {tx.detail}
-          </p>
-        </div>
-      ) : null}
+      <TxStatusCard tx={tx} network={network} />
     </div>
   );
 }

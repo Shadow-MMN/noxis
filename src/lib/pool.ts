@@ -50,6 +50,17 @@ export async function readPoolFee(nodeUrl: string): Promise<bigint> {
   return BigInt(raw);
 }
 
+// Basic Starknet address validation: 0x-prefixed hex, non-zero.
+export function isValidAddress(input: string): boolean {
+  const s = input.trim();
+  if (!/^0x[0-9a-fA-F]{1,64}$/.test(s)) return false;
+  try {
+    return BigInt(s) !== 0n;
+  } catch {
+    return false;
+  }
+}
+
 // Parse a user amount string ("1.5") into the smallest unit. Returns null on
 // invalid input (including more than 18 decimals).
 export function strkToWei(input: string): bigint | null {

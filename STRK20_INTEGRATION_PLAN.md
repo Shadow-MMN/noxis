@@ -57,7 +57,7 @@ Limit, stated plainly: deposit/withdrawal amounts and the timing of pool interac
 4. Surface screening-declined deposits as a state, not a bug (deposit screening is enforced onchain).
 5. Verify headless + manual Ready X check.
 
-## 7. Phase 3 — Private transfer + unshield
+## 7. Phase 3 — Private transfer + unshield ✅ done 2026-08-14
 
 1. Private transfer flow: `strk20InvokeTransaction(actions)` takes an **array** — batch multiple transfers into one wallet request where a flow calls for it.
 2. Unshield flow: withdraw to a fresh account; honest "withdrawal amount is public" labeling.

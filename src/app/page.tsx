@@ -1,5 +1,7 @@
 import { ConnectWallet } from "@/components/wallet/connect-button";
 import { ShieldPanel } from "@/components/shield/shield-panel";
+import { TransferPanel } from "@/components/transfer/transfer-panel";
+import { UnshieldPanel } from "@/components/unshield/unshield-panel";
 
 const POOL_ADDRESS =
   "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a";
@@ -136,6 +138,34 @@ export default function Home() {
           </p>
           <div className="mt-8">
             <ShieldPanel />
+          </div>
+        </section>
+
+        {/* Private transfer */}
+        <section id="send" className="mt-24">
+          <h2 className="text-2xl font-semibold tracking-tight text-graphite-50">
+            Send privately
+          </h2>
+          <p className="mt-3 max-w-xl text-graphite-300">
+            Spend one note into a new one. The sender, recipient and amount
+            stay hidden — only the fact that a transfer happened is visible.
+          </p>
+          <div className="mt-8">
+            <TransferPanel />
+          </div>
+        </section>
+
+        {/* Unshield */}
+        <section id="unshield" className="mt-24">
+          <h2 className="text-2xl font-semibold tracking-tight text-graphite-50">
+            Unshield
+          </h2>
+          <p className="mt-3 max-w-xl text-graphite-300">
+            Withdraw to a fresh account and break the link back to your
+            deposit. The withdrawal amount is public.
+          </p>
+          <div className="mt-8">
+            <UnshieldPanel />
           </div>
         </section>
       </main>
