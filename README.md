@@ -4,6 +4,8 @@
 
 Noxis is a private payments app built for the [STRK20 Private Sprint](https://github.com/starkience/strk20-hackathon). It lets you hold, send, and receive STRK-backed value without publishing who paid whom, how much, or when. Payments flow through the STRK20 privacy pool on Starknet mainnet — visible on-chain is that *a* shielded payment happened, never *your* shielded payment.
 
+**Live demo:** [https://noxis-jet.vercel.app](https://noxis-jet.vercel.app)
+
 ## What it does
 
 - **Shield** — deposit STRK into the STRK20 pool and mint a private note only you can spend.
